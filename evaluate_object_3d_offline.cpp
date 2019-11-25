@@ -17,8 +17,6 @@
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/geometries/adapted/c_array.hpp>
 
-#include "mail.h"
-
 BOOST_GEOMETRY_REGISTER_C_ARRAY_CS(cs::cartesian)
 
 typedef boost::geometry::model::polygon<boost::geometry::model::d2::point_xy<double> > Polygon;
@@ -791,7 +789,7 @@ vector<int32_t> getEvalIndices(const string& result_dir) {
     return indices;
 }
 
-bool eval(string gt_dir, string result_dir, Mail* mail){
+bool eval(string gt_dir, string result_dir){
 
   // set some global parameters
   initGlobals();
@@ -816,7 +814,6 @@ bool eval(string gt_dir, string result_dir, Mail* mail){
   vector<bool> eval_3d(NUM_CLASS, false);
 
   // for all images read groundtruth and detections
-  mail->msg("Loading detections...");
   std::vector<int32_t> indices = getEvalIndices(result_dir + "/data/");
   printf("number of files for evaluation: %d\n", (int)indices.size());
 
@@ -836,15 +833,12 @@ bool eval(string gt_dir, string result_dir, Mail* mail){
 
     // check for errors
     if (!gt_success) {
-      mail->msg("ERROR: Couldn't read: %s of ground truth. Please write me an email!", file_name);
       return false;
     }
     if (!det_success) {
-      mail->msg("ERROR: Couldn't read: %s", file_name);
       return false;
     }
   }
-  mail->msg("  done.");
 
   // holds pointers for result files
   FILE *fp_det=0, *fp_ori=0;
@@ -860,7 +854,6 @@ bool eval(string gt_dir, string result_dir, Mail* mail){
       if(   !eval_class(fp_det, fp_ori, cls, groundtruth, detections, compute_aos, imageBoxOverlap, precision[0], aos[0], EASY, IMAGE)
          || !eval_class(fp_det, fp_ori, cls, groundtruth, detections, compute_aos, imageBoxOverlap, precision[1], aos[1], MODERATE, IMAGE)
          || !eval_class(fp_det, fp_ori, cls, groundtruth, detections, compute_aos, imageBoxOverlap, precision[2], aos[2], HARD, IMAGE)) {
-        mail->msg("%s evaluation failed.", CLASS_NAMES[c].c_str());
         return false;
       }
       fclose(fp_det);
@@ -884,7 +877,6 @@ bool eval(string gt_dir, string result_dir, Mail* mail){
       if(   !eval_class(fp_det, fp_ori, cls, groundtruth, detections, compute_aos, groundBoxOverlap, precision[0], aos[0], EASY, GROUND)
          || !eval_class(fp_det, fp_ori, cls, groundtruth, detections, compute_aos, groundBoxOverlap, precision[1], aos[1], MODERATE, GROUND)
          || !eval_class(fp_det, fp_ori, cls, groundtruth, detections, compute_aos, groundBoxOverlap, precision[2], aos[2], HARD, GROUND)) {
-        mail->msg("%s evaluation failed.", CLASS_NAMES[c].c_str());
         return false;
       }
       fclose(fp_det);
@@ -901,7 +893,6 @@ bool eval(string gt_dir, string result_dir, Mail* mail){
       if(   !eval_class(fp_det, fp_ori, cls, groundtruth, detections, compute_aos, box3DOverlap, precision[0], aos[0], EASY, BOX3D)
          || !eval_class(fp_det, fp_ori, cls, groundtruth, detections, compute_aos, box3DOverlap, precision[1], aos[1], MODERATE, BOX3D)
          || !eval_class(fp_det, fp_ori, cls, groundtruth, detections, compute_aos, box3DOverlap, precision[2], aos[2], HARD, BOX3D)) {
-        mail->msg("%s evaluation failed.", CLASS_NAMES[c].c_str());
         return false;
       }
       fclose(fp_det);
@@ -925,22 +916,12 @@ int32_t main (int32_t argc,char *argv[]) {
   string gt_dir = argv[1];
   string result_dir = argv[2];
 
-  // init notification mail
-  Mail *mail;
-  mail = new Mail();
-  mail->msg("Thank you for participating in our evaluation!");
-
   // run evaluation
-  if (eval(gt_dir, result_dir, mail)) {
-    mail->msg("Your evaluation results are available at:");
-    mail->msg(result_dir.c_str());
+  if (eval(gt_dir, result_dir)) {
   } else {
     system(("rm -r " + result_dir + "/plot").c_str());
-    mail->msg("An error occured while processing your results.");
   }
 
-  // send mail and exit
-  delete mail;
 
   return 0;
 }
